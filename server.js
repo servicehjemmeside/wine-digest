@@ -49,7 +49,7 @@ async function fetchWines(systemPrompt, userPrompt) {
 
   for (let i = 0; i < 5; i++) {
     const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5",
       max_tokens: 1000,
       system: systemPrompt,
       tools: [{ type: "web_search_20250305", name: "web_search" }],
