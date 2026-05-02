@@ -315,6 +315,18 @@ app.post("/api/send-preview", async (req, res) => {
   }
 });
 
+// POST /api/search — proxy wine search from frontend
+app.post("/api/search", async (req, res) => {
+  const { systemPrompt, userPrompt } = req.body;
+  if (!systemPrompt || !userPrompt) return res.status(400).json({ error: "Missing prompts" });
+  try {
+    const wines = await fetchWines(systemPrompt, userPrompt);
+    res.json({ wines });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   const digests = loadDigests();
