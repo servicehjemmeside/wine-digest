@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wine Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0e0d;
+      --bg2: #1a1917;
+      --bg3: #242220;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0ece4;
+      --text2: #9e9a93;
+      --text3: #5e5b56;
+      --gold: #c9a84c;
+      --gold2: #e8c96a;
+      --green: #4a9e6e;
+      --red: #c0392b;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── LOGIN ─────────────────────────────────── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: radial-gradient(ellipse at 50% 0%, #2a1f0e 0%, var(--bg) 60%);
+    }
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .login-logo { font-size: 36px; margin-bottom: 1rem; }
+    .login-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
+    .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 2rem; }
+    .login-card input {
+      width: 100%; height: 44px; padding: 0 14px;
+      background: var(--bg3); border: 0.5px solid var(--border2);
+      border-radius: 10px; font-size: 14px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; outline: none;
+      margin-bottom: 10px;
+    }
+    .login-card input:focus { border-color: var(--gold); }
+    .login-btn {
+      width: 100%; height: 44px;
+      background: var(--gold); color: #1a1410;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s;
+    }
+    .login-btn:hover { background: var(--gold2); }
+    .login-error { font-size: 12px; color: #e07070; margin-top: 10px; display: none; }
+    .login-hint { font-size: 11px; color: var(--text3); margin-top: 1.5rem; line-height: 1.6; }
+
+    /* ─── APP SHELL ──────────────────────────────── */
+    #app { display: none; min-height: 100vh; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 58px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-brand span:first-child { font-size: 20px; }
+    .topbar-brand span:last-child { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text); }
+    .topbar-nav { display: flex; gap: 2px; }
+    .nav-btn {
+      padding: 6px 14px; border: none; background: transparent;
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      cursor: pointer; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+    }
+    .nav-btn:hover { color: var(--text); background: var(--bg3); }
+    .nav-btn.active { color: var(--gold); background: rgba(201,168,76,0.1); }
+    .logout-btn {
+      padding: 6px 14px; border: 0.5px solid var(--border2);
+      background: transparent; color: var(--text2); font-size: 12px;
+      cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif;
+    }
+    .logout-btn:hover { color: var(--text); border-color: var(--border2); }
+
+    .main { max-width: 1040px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* ─── PANELS ─────────────────────────────────── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ─── FILTERS ────────────────────────────────── */
+    .filter-card {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+    @media (max-width: 640px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+    .fg label { display: block; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 5px; }
+    select, input[type=number], input[type=text], input[type=email] {
+      width: 100%; height: 36px; padding: 0 10px;
+      background: var(--bg3); border: 0.5px solid var(--border2);
+      border-radius: 8px; font-size: 13px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; outline: none; appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    select:focus, input:focus { border-color: var(--gold); }
+    .price-row { display: flex; gap: 6px; }
+    .price-row input { flex: 1; }
+    .ctoggle { display: flex; border: 0.5px solid var(--border2); border-radius: 8px; overflow: hidden; }
+    .ctoggle button { padding: 0 10px; height: 36px; border: none; background: transparent; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text2); font-family: 'DM Sans', sans-serif; }
+    .ctoggle button.active { background: var(--bg); color: var(--gold); }
+    .rating-row { display: flex; align-items: center; gap: 8px; }
+    .rating-row input[type=range] { flex: 1; accent-color: var(--gold); }
+    .rval { font-size: 13px; font-weight: 500; min-width: 28px; color: var(--gold); }
+
+    .btn-primary {
+      width: 100%; height: 42px;
+      background: var(--gold); color: #1a1410;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--gold2); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary {
+      height: 40px; padding: 0 18px;
+      background: transparent; color: var(--text2);
+      border: 0.5px solid var(--border2); border-radius: 10px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--border2); }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── SECTIONS ───────────────────────────────── */
+    .section-hdr {
+      display: flex; align-items: baseline; gap: 10px;
+      margin-bottom: 1rem; padding-bottom: 10px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); }
+    .sbadge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); }
+    .badge-green { background: rgba(74,158,110,0.15); color: var(--green); }
+    .smeta { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+    /* ─── WINE CARDS ─────────────────────────────── */
+    .wine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+    .wine-card {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 1.1rem;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: border-color 0.15s;
+    }
+    .wine-card:hover { border-color: var(--border2); }
+    .card-top { display: flex; align-items: center; justify-content: space-between; }
+    .tbadge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .b-red { background: rgba(192,57,43,0.15); color: #e07070; }
+    .b-white { background: rgba(201,168,76,0.12); color: var(--gold); }
+    .b-rose { background: rgba(200,100,120,0.15); color: #e08090; }
+    .b-sparkling { background: rgba(100,160,220,0.15); color: #80b8e0; }
+    .src-tag { font-size: 10px; color: var(--text3); }
+    .wine-name { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--text); line-height: 1.3; }
+    .wine-sub { font-size: 12px; color: var(--text2); }
+    .wine-region { font-size: 11px; color: var(--text3); }
+    .wine-grape { font-size: 11px; color: var(--text2); font-style: italic; }
+    .wine-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+    .trend-bar { display: flex; align-items: center; gap: 5px; background: rgba(74,158,110,0.1); border-radius: 6px; padding: 4px 8px; }
+    .trend-bar span { font-size: 11px; color: var(--green); font-weight: 500; }
+    .wine-bottom { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 8px; border-top: 0.5px solid var(--border); margin-top: auto; }
+    .rnum { font-size: 20px; font-weight: 500; color: var(--gold); }
+    .rstars { font-size: 11px; color: var(--gold); }
+    .rcount { font-size: 10px; color: var(--text3); }
+    .pamount { font-size: 15px; font-weight: 500; color: var(--text); text-align: right; }
+    .plabel { font-size: 10px; color: var(--text3); text-align: right; }
+
+    /* ─── DIGEST ─────────────────────────────────── */
+    .digest-card {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .digest-card h3 { font-size: 14px; font-weight: 500; color: var(--text2); margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
+    .pref-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+    .pref-row:last-of-type { border-bottom: none; }
+    .pref-label { font-size: 13px; color: var(--text); }
+    .pref-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .toggle { width: 36px; height: 20px; background: var(--bg3); border-radius: 10px; cursor: pointer; position: relative; transition: background 0.2s; border: 0.5px solid var(--border2); }
+    .toggle.on { background: var(--green); border-color: var(--green); }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: white; transition: left 0.2s; }
+    .toggle.on::after { left: 19px; }
+    .digest-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+
+    /* ─── STATUS ─────────────────────────────────── */
+    .status { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 13px; }
+    .status-icon { font-size: 36px; margin-bottom: 8px; display: block; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-sec { padding: 2rem; text-align: center; font-size: 13px; color: var(--text3); }
+    .error-box { background: rgba(192,57,43,0.1); border: 0.5px solid rgba(192,57,43,0.3); border-radius: 10px; padding: 1rem; font-size: 13px; color: #e07070; }
+    .success-box { background: rgba(74,158,110,0.1); border: 0.5px solid rgba(74,158,110,0.3); border-radius: 10px; padding: 1rem; font-size: 13px; color: var(--green); margin-top: 10px; }
+
+    /* ─── SETTINGS ───────────────────────────────── */
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 13px; color: var(--text); }
+    .settings-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .settings-val { font-size: 12px; color: var(--text2); }
+    .sections { display: flex; flex-direction: column; gap: 2rem; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🍷</div>
+    <div class="login-title">Wine Discovery</div>
+    <div class="login-sub">Log ind for at fortsætte</div>
+    <input type="text" id="login-user" placeholder="Brugernavn" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="Adgangskode" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Log ind</button>
+    <div class="login-error" id="login-error">Forkert brugernavn eller adgangskode</div>
+    <div class="login-hint">
+      Standard login: <strong>admin</strong> / <strong>wine2024</strong><br>
+      Skift kode i Settings efter første login
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand"><span>🍷</span><span>Wine Discovery</span></div>
+    <div class="topbar-nav">
+      <button class="nav-btn active" onclick="showPanel('discover')">Discover</button>
+      <button class="nav-btn" onclick="showPanel('digest')">Ugentlig digest</button>
+      <button class="nav-btn" onclick="showPanel('settings')">Indstillinger</button>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Log ud</button>
+  </div>
+
+  <div class="main">
+
+    <!-- DISCOVER -->
+    <div id="panel-discover" class="panel active">
+      <div class="filter-card">
+        <div class="filter-grid">
+          <div class="fg">
+            <label>Vintype</label>
+            <select id="wineType">
+              <option value="any">Alle typer</option>
+              <option value="Red">Rødvin</option>
+              <option value="White">Hvidvin</option>
+              <option value="Rosé">Rosé</option>
+              <option value="Sparkling">Mousserende</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Min. rating</label>
+            <div class="rating-row">
+              <input type="range" id="minRating" min="3.5" max="4.9" step="0.1" value="4.0" oninput="document.getElementById('rval').textContent=parseFloat(this.value).toFixed(1)">
+              <span class="rval" id="rval">4.0</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Maks pris</label>
+            <div class="price-row">
+              <input type="number" id="maxPrice" placeholder="f.eks. 300" value="300" min="0">
+              <div class="ctoggle">
+                <button id="btnDKK" class="active" onclick="setCurrency('DKK')">DKK</button>
+                <button id="btnUSD" onclick="setCurrency('USD')">USD</button>
+              </div>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Land / region</label>
+            <input type="text" id="region" placeholder="f.eks. Frankrig, Italien…">
+          </div>
+        </div>
+        <button class="btn-primary" id="searchBtn" onclick="searchAll()">Find vine</button>
+      </div>
+      <div id="output"><div class="status"><span class="status-icon">🍷</span>Sæt dine filtre og klik Find vine</div></div>
+    </div>
+
+    <!-- DIGEST -->
+    <div id="panel-digest" class="panel">
+      <div class="digest-card">
+        <h3>Digest indstillinger</h3>
+        <div class="form-grid">
+          <div class="fg"><label>Send til email</label><input type="email" id="digestEmail" placeholder="din@email.dk"></div>
+          <div class="fg"><label>Send om</label>
+            <select id="digestDay">
+              <option value="Monday">Mandag</option><option value="Tuesday">Tirsdag</option>
+              <option value="Wednesday">Onsdag</option><option value="Thursday" selected>Torsdag</option>
+              <option value="Friday">Fredag</option><option value="Saturday">Lørdag</option><option value="Sunday">Søndag</option>
+            </select>
+          </div>
+          <div class="fg"><label>Vintype</label>
+            <select id="digestType">
+              <option value="any">Alle typer</option><option value="Red">Rødvin</option>
+              <option value="White">Hvidvin</option><option value="Rosé">Rosé</option><option value="Sparkling">Mousserende</option>
+            </select>
+          </div>
+          <div class="fg"><label>Maks pris</label>
+            <div class="price-row">
+              <input type="number" id="digestPrice" placeholder="300" value="300" min="0">
+              <div class="ctoggle">
+                <button id="dBtnDKK" class="active" onclick="setDigestCurrency('DKK')">DKK</button>
+                <button id="dBtnUSD" onclick="setDigestCurrency('USD')">USD</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:12px"><label>Region</label><input type="text" id="digestRegion" placeholder="f.eks. Bordeaux, Toscana…"></div>
+        <div class="pref-row">
+          <div><div class="pref-label">Inkludér top-ratede</div><div class="pref-sub">Etablerede vine med høj rating og mange anmeldelser</div></div>
+          <div class="toggle on" id="toggleTop" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="pref-row">
+          <div><div class="pref-label">Inkludér stigende stjerner</div><div class="pref-sub">Vine der hurtigt får flere anmeldelser</div></div>
+          <div class="toggle on" id="toggleRising" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="digest-actions">
+          <button class="btn-secondary" id="previewBtn" onclick="sendPreview()">Send preview nu ↗</button>
+          <button class="btn-primary" style="flex:1" id="saveDigestBtn" onclick="saveDigest()">Gem ugentlig digest</button>
+        </div>
+        <div id="digestMsg"></div>
+      </div>
+      <div id="savedDigests"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="panel-settings" class="panel">
+      <div class="digest-card">
+        <h3>Backend URL</h3>
+        <div class="settings-row">
+          <div><div class="settings-label">Railway server URL</div><div class="settings-sub">Din Railway deployment URL — find den under Settings → Networking i Railway</div></div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="fg"><label>URL</label><input type="text" id="backendUrl" placeholder="https://wine-digest-xxx.railway.app"></div>
+          <button class="btn-primary" style="margin-top:10px" onclick="saveBackend()">Gem URL</button>
+          <div id="backendMsg"></div>
+        </div>
+      </div>
+      <div class="digest-card">
+        <h3>Adgangskode</h3>
+        <div class="form-grid">
+          <div class="fg"><label>Nyt brugernavn</label><input type="text" id="newUser" placeholder="brugernavn"></div>
+          <div class="fg"><label>Ny adgangskode</label><input type="password" id="newPass" placeholder="adgangskode"></div>
+        </div>
+        <button class="btn-primary" onclick="saveCredentials()">Opdatér login</button>
+        <div id="credMsg"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── AUTH ────────────────────────────────────────────────────────
+let creds = JSON.parse(localStorage.getItem('wd_creds') || '{"user":"admin","pass":"wine2024"}');
+let backendUrl = localStorage.getItem('wd_backend') || '';
+let currency = 'DKK', digestCurrency = 'DKK';
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if (u === creds.user && p === creds.pass) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    if (backendUrl) document.getElementById('backendUrl').value = backendUrl;
+    loadSavedDigests();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+function doLogout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+function saveCredentials() {
+  const u = document.getElementById('newUser').value.trim();
+  const p = document.getElementById('newPass').value;
+  if (!u || !p) { document.getElementById('credMsg').innerHTML = '<div class="error-box">Udfyld begge felter</div>'; return; }
+  creds = { user: u, pass: p };
+  localStorage.setItem('wd_creds', JSON.stringify(creds));
+  document.getElementById('credMsg').innerHTML = '<div class="success-box">✓ Login opdateret</div>';
+}
+function saveBackend() {
+  const url = document.getElementById('backendUrl').value.trim().replace(/\/$/, '');
+  backendUrl = url;
+  localStorage.setItem('wd_backend', url);
+  document.getElementById('backendMsg').innerHTML = '<div class="success-box">✓ URL gemt</div>';
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function setCurrency(c) { currency = c; document.getElementById('btnDKK').classList.toggle('active', c==='DKK'); document.getElementById('btnUSD').classList.toggle('active', c==='USD'); }
+function setDigestCurrency(c) { digestCurrency = c; document.getElementById('dBtnDKK').classList.toggle('active', c==='DKK'); document.getElementById('dBtnUSD').classList.toggle('active', c==='USD'); }
+function stars(r) { const f=Math.floor(r),h=r%1>=0.5?1:0; return '★'.repeat(f)+(h?'½':'')+'☆'.repeat(5-f-h); }
+function fmt(n) { if(!n) return '—'; if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(0)+'k'; return String(n); }
+function bc(t) { const l=(t||'').toLowerCase(); if(l==='red') return 'b-red'; if(l==='white') return 'b-white'; if(l.includes('ros')) return 'b-rose'; return 'b-sparkling'; }
+
+function renderCard(w, showTrend) {
+  const pv = currency==='DKK' ? w.price_dkk : w.price_usd;
+  const ps = pv ? `${Math.round(pv).toLocaleString()} ${currency}` : '—';
+  const tb = showTrend && w.momentum ? `<div class="trend-bar"><span>↑ ${w.momentum}</span></div>` : '';
+  return `<div class="wine-card">
+    <div class="card-top"><span class="tbadge ${bc(w.type)}">${w.type||'Vin'}</span><span class="src-tag">${w.source||'Vivino'}</span></div>
+    <div><div class="wine-name">${w.name||''} ${w.vintage||''}</div><div class="wine-sub">${w.winery||''}</div><div class="wine-region">${w.region||''}</div></div>
+    <div class="wine-grape">${w.grape||''}</div>${tb}
+    <div class="wine-desc">${w.description||''}</div>
+    <div class="wine-bottom">
+      <div><div class="rnum">${parseFloat(w.rating||0).toFixed(1)}</div><div class="rstars">${stars(parseFloat(w.rating||0))}</div><div class="rcount">${fmt(w.reviews)} anm.</div></div>
+      <div><div class="pamount">${ps}</div><div class="plabel">gns. pris</div></div>
+    </div>
+  </div>`;
+}
+
+// ─── API CALL ─────────────────────────────────────────────────────
+async function callAI(sys, prompt) {
+  let messages = [{ role: 'user', content: prompt }];
+  for (let i = 0; i < 5; i++) {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: sys, tools: [{ type: 'web_search_20250305', name: 'web_search' }], messages })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || 'API fejl');
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if (text.trim()) {
+      const clean = text.replace(/```json|```/g,'').trim();
+      const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+      if (s!==-1 && e!==-1) { try { return JSON.parse(clean.slice(s,e+1)); } catch(e) {} }
+    }
+    if (data.stop_reason==='end_turn') break;
+    messages.push({ role: 'assistant', content: data.content });
+    const tu = (data.content||[]).filter(b=>b.type==='tool_use');
+    if (!tu.length) break;
+    messages.push({ role: 'user', content: tu.map(t=>({ type:'tool_result', tool_use_id:t.id, content:'' })) });
+  }
+  return [];
+}
+
+// ─── SEARCH ──────────────────────────────────────────────────────
+async function searchAll() {
+  const btn = document.getElementById('searchBtn');
+  const out = document.getElementById('output');
+  const type = document.getElementById('wineType').value;
+  const rating = parseFloat(document.getElementById('minRating').value).toFixed(1);
+  const price = document.getElementById('maxPrice').value;
+  const region = document.getElementById('region').value.trim();
+  btn.disabled = true; btn.textContent = 'Søger…';
+  const f = `Vintype: ${type==='any'?'alle':type}\nMin rating: ${rating}${price?`\nMaks pris: ${price} ${currency}`:''}${region?`\nRegion: ${region}`:''}`;
+  out.innerHTML = `<div class="sections">
+    <div><div class="section-hdr"><span class="section-title">Top-ratede</span><span class="sbadge badge-gold">Etablerede</span><span class="smeta">Høj rating · mest anmeldt</span></div><div id="sec-top"><div class="loading-sec"><span class="spinner"></span>Søger…</div></div></div>
+    <div><div class="section-hdr"><span class="section-title">Stigende stjerner</span><span class="sbadge badge-green">Trending ↑</span><span class="smeta">Flest nye anmeldelser</span></div><div id="sec-trend"><div class="loading-sec"><span class="spinner"></span>Finder trending vine…</div></div></div>
+  </div>`;
+  try {
+    const [top, trend] = await Promise.all([
+      callAI(`Du er en vinekspert. Søg Vivino og Wine-Searcher. Returner KUN et gyldigt JSON-array, ingen markdown. Felter: name,winery,vintage,type("Red"|"White"|"Rosé"|"Sparkling"),region,rating(tal),reviews(tal),price_usd(tal|null),price_dkk(tal|null),grape,description(1-2 sætninger),source. Returner 6-8 top-ratede vine med mange anmeldelser.`, `Find top-ratede vine:\n${f}\nReturner JSON-array kun.`),
+      callAI(`Du er en vintrend-analytiker. Søg Vivino. Returner KUN et gyldigt JSON-array, ingen markdown. Felter: name,winery,vintage,type("Red"|"White"|"Rosé"|"Sparkling"),region,rating(tal),reviews(tal),price_usd(tal|null),price_dkk(tal|null),grape,description(1-2 sætninger),source,momentum(kort trend-streng). Returner 6-8 stigende stjerne-vine der hurtigt får flere anmeldelser.`, `Find trending stigende vine:\n${f}\nReturner JSON-array kun.`)
+    ]);
+    document.getElementById('sec-top').innerHTML = top.length ? `<div class="wine-grid">${top.map(w=>renderCard(w,false)).join('')}</div>` : '<div class="loading-sec" style="color:var(--text3)">Ingen resultater</div>';
+    document.getElementById('sec-trend').innerHTML = trend.length ? `<div class="wine-grid">${trend.map(w=>renderCard(w,true)).join('')}</div>` : '<div class="loading-sec" style="color:var(--text3)">Ingen resultater</div>';
+  } catch(err) { out.innerHTML = `<div class="error-box">Fejl: ${err.message}</div>`; }
+  btn.disabled = false; btn.textContent = 'Find vine';
+}
+
+// ─── DIGEST ──────────────────────────────────────────────────────
+function getDigestSettings() {
+  return {
+    email: document.getElementById('digestEmail').value.trim(),
+    sendDay: document.getElementById('digestDay').value,
+    wineType: document.getElementById('digestType').value,
+    maxPrice: document.getElementById('digestPrice').value,
+    currency: digestCurrency,
+    region: document.getElementById('digestRegion').value.trim(),
+    includeTop: document.getElementById('toggleTop').classList.contains('on'),
+    includeRising: document.getElementById('toggleRising').classList.contains('on'),
+  };
+}
+
+async function saveDigest() {
+  const s = getDigestSettings();
+  const msg = document.getElementById('digestMsg');
+  if (!s.email) { msg.innerHTML = '<div class="error-box">Indtast en email-adresse</div>'; return; }
+  if (!backendUrl) { msg.innerHTML = '<div class="error-box">Indtast din Railway URL under Indstillinger først</div>'; return; }
+  const btn = document.getElementById('saveDigestBtn');
+  btn.disabled = true; btn.textContent = 'Gemmer…';
+  try {
+    const resp = await fetch(`${backendUrl}/api/digests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    msg.innerHTML = `<div class="success-box">✓ Digest gemt — sender hver ${s.sendDay} til ${s.email}</div>`;
+    loadSavedDigests();
+  } catch(err) { msg.innerHTML = `<div class="error-box">Fejl: ${err.message}</div>`; }
+  btn.disabled = false; btn.textContent = 'Gem ugentlig digest';
+}
+
+async function sendPreview() {
+  const s = getDigestSettings();
+  const msg = document.getElementById('digestMsg');
+  if (!s.email) { msg.innerHTML = '<div class="error-box">Indtast en email-adresse</div>'; return; }
+  if (!backendUrl) { msg.innerHTML = '<div class="error-box">Indtast din Railway URL under Indstillinger først</div>'; return; }
+  const btn = document.getElementById('previewBtn');
+  btn.disabled = true; btn.textContent = 'Sender…';
+  try {
+    const resp = await fetch(`${backendUrl}/api/send-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    msg.innerHTML = `<div class="success-box">✓ Preview sendt til ${s.email} — tjek din indbakke!</div>`;
+  } catch(err) { msg.innerHTML = `<div class="error-box">Fejl: ${err.message}</div>`; }
+  btn.disabled = false; btn.textContent = 'Send preview nu ↗';
+}
+
+async function loadSavedDigests() {
+  if (!backendUrl) return;
+  const el = document.getElementById('savedDigests');
+  try {
+    const resp = await fetch(`${backendUrl}/api/digests`);
+    const list = await resp.json();
+    if (!list.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="digest-card"><h3>Aktive digests (${list.length})</h3>${list.map(d=>`
+      <div class="settings-row">
+        <div><div class="settings-label">${d.email}</div><div class="settings-sub">Hver ${d.sendDay} · ${d.wineType!=='any'?d.wineType:'Alle typer'}${d.maxPrice?' · maks '+d.maxPrice+' '+d.currency:''}${d.last_sent?' · Sidst sendt: '+new Date(d.last_sent).toLocaleDateString('da-DK'):''}</div></div>
+        <button class="btn-secondary" style="font-size:11px;height:32px;padding:0 12px" onclick="deleteDigest('${d.id}')">Slet</button>
+      </div>`).join('')}</div>`;
+  } catch(e) {}
+}
+
+async function deleteDigest(id) {
+  if (!backendUrl) return;
+  await fetch(`${backendUrl}/api/digests/${id}`, { method: 'DELETE' });
+  loadSavedDigests();
+}
+</script>
+</body>
+</html>
