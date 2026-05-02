@@ -9,7 +9,11 @@ const cors = require("cors");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "DELETE"],
+  allowedHeaders: ["Content-Type"]
+}));
 
 const DB_FILE = path.join(__dirname, "digests.json");
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
