@@ -184,6 +184,7 @@
     .wine-sub { font-size: 12px; color: var(--text2); }
     .wine-region { font-size: 11px; color: var(--text3); }
     .wine-grape { font-size: 11px; color: var(--text2); font-style: italic; }
+    .avail-bar { min-height: 28px; }
     .wine-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
     .trend-bar { display: flex; align-items: center; gap: 5px; background: rgba(74,158,110,0.1); border-radius: 6px; padding: 4px 8px; }
     .trend-bar span { font-size: 11px; color: var(--green); font-weight: 500; }
@@ -436,16 +437,45 @@ function renderCard(w, showTrend) {
   const pv = currency==='DKK' ? w.price_dkk : w.price_usd;
   const ps = pv ? `${Math.round(pv).toLocaleString()} ${currency}` : '—';
   const tb = showTrend && w.momentum ? `<div class="trend-bar"><span>↑ ${w.momentum}</span></div>` : '';
-  return `<div class="wine-card">
+  const cardId = `card-${Math.random().toString(36).slice(2,9)}`;
+  return `<div class="wine-card" id="${cardId}">
     <div class="card-top"><span class="tbadge ${bc(w.type)}">${w.type||'Vin'}</span><span class="src-tag">${w.source||'Vivino'}</span></div>
     <div><div class="wine-name">${w.name||''} ${w.vintage||''}</div><div class="wine-sub">${w.winery||''}</div><div class="wine-region">${w.region||''}</div></div>
     <div class="wine-grape">${w.grape||''}</div>${tb}
     <div class="wine-desc">${w.description||''}</div>
+    <div class="avail-bar" id="avail-${cardId}"><span style="font-size:11px;color:var(--text3)"><span class="spinner"></span> Tjekker dansk tilgængelighed…</span></div>
     <div class="wine-bottom">
       <div><div class="rnum">${parseFloat(w.rating||0).toFixed(1)}</div><div class="rstars">${stars(parseFloat(w.rating||0))}</div><div class="rcount">${fmt(w.reviews)} anm.</div></div>
       <div><div class="pamount">${ps}</div><div class="plabel">gns. pris</div></div>
     </div>
   </div>`;
+}
+
+async function checkAvailability(cardId, wineName, winery, vintage) {
+  if (!backendUrl) return;
+  const el = document.getElementById(`avail-${cardId}`);
+  if (!el) return;
+  try {
+    const resp = await fetch(`${backendUrl}/api/availability`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wineName, winery, vintage })
+    });
+    const data = await resp.json();
+    if (data.available) {
+      const price = data.price_dkk ? ` · ${Math.round(data.price_dkk).toLocaleString()} DKK` : '';
+      const link = data.url ? `href="${data.url}" target="_blank"` : '';
+      el.innerHTML = `<a ${link} style="display:flex;align-items:center;gap:6px;text-decoration:none;background:rgba(74,158,110,0.1);border-radius:6px;padding:5px 8px;">
+        <span style="font-size:14px">🇩🇰</span>
+        <span style="font-size:11px;color:var(--green);font-weight:500">Købes i DK${price}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:2px">${data.shop||''}${data.url?' ↗':''}</span>
+      </a>`;
+    } else {
+      el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:rgba(192,57,43,0.08);border-radius:6px;padding:5px 8px;">
+        <span style="font-size:12px">🔴</span>
+        <span style="font-size:11px;color:#e07070">Ikke fundet i DK</span>
+      </div>`;
+    }
+  } catch(e) { if(el) el.innerHTML = ''; }
 }
 
 // ─── API CALL via Railway backend ────────────────────────────────
@@ -481,6 +511,17 @@ async function searchAll() {
     ]);
     document.getElementById('sec-top').innerHTML = top.length ? `<div class="wine-grid">${top.map(w=>renderCard(w,false)).join('')}</div>` : '<div class="loading-sec" style="color:var(--text3)">Ingen resultater</div>';
     document.getElementById('sec-trend').innerHTML = trend.length ? `<div class="wine-grid">${trend.map(w=>renderCard(w,true)).join('')}</div>` : '<div class="loading-sec" style="color:var(--text3)">Ingen resultater</div>';
+    // Check Danish availability for all wines asynchronously
+    [...top, ...trend].forEach(w => {
+      const cards = document.querySelectorAll('.wine-card');
+      cards.forEach(card => {
+        const name = card.querySelector('.wine-name')?.textContent?.trim();
+        if (name && name.startsWith((w.name||'').trim())) {
+          const availEl = card.querySelector('.avail-bar');
+          if (availEl) checkAvailability(availEl.id.replace('avail-',''), w.name, w.winery, w.vintage);
+        }
+      });
+    });
   } catch(err) { out.innerHTML = `<div class="error-box">Fejl: ${err.message}</div>`; }
   btn.disabled = false; btn.textContent = 'Find vine';
 }

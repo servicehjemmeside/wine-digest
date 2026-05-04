@@ -331,6 +331,34 @@ app.post("/api/search", async (req, res) => {
   }
 });
 
+// POST /api/availability — check if a wine is sold in Denmark
+app.post("/api/availability", async (req, res) => {
+  const { wineName, winery, vintage } = req.body;
+  if (!wineName) return res.status(400).json({ error: "wineName required" });
+  const sys = `You are a wine availability checker for Denmark. Search Danish wine shops to find if this wine is currently available for purchase in Denmark. Return ONLY a valid JSON object, no markdown, no backticks. Fields: available (boolean), shop (string — name of Danish shop e.g. "Vivino.com/dk", "Skafferi.dk", "Winefamily.dk", "Falstaff.dk" etc.), price_dkk (number|null — Danish retail price in DKK), url (string|null — direct product URL). If not found return { "available": false, "shop": null, "price_dkk": null, "url": null }.`;
+  try {
+    let messages = [{ role: "user", content: `Is this wine available for purchase in Denmark right now? Wine: "${wineName}" by "${winery || "unknown"}" vintage ${vintage || "NV"}. Search Danish wine retailers and webshops. Return JSON only.` }];
+    let result = { available: false, shop: null, price_dkk: null, url: null };
+    for (let i = 0; i < 4; i++) {
+      const resp = await client.messages.create({ model: "claude-sonnet-4-5", max_tokens: 500, system: sys, tools: [{ type: "web_search_20250305", name: "web_search" }], messages });
+      const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
+      if (text.trim()) {
+        const clean = text.replace(/```json|```/g, "").trim();
+        const s = clean.indexOf("{"), e = clean.lastIndexOf("}");
+        if (s !== -1 && e !== -1) { try { result = JSON.parse(clean.slice(s, e + 1)); break; } catch(err) {} }
+      }
+      if (resp.stop_reason === "end_turn") break;
+      messages.push({ role: "assistant", content: resp.content });
+      const tu = resp.content.filter(b => b.type === "tool_use");
+      if (!tu.length) break;
+      messages.push({ role: "user", content: tu.map(t => ({ type: "tool_result", tool_use_id: t.id, content: "" })) });
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   const digests = loadDigests();
